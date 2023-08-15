@@ -2,6 +2,7 @@
                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+                xmlns:local="clr-namespace:Jviz"
                 Title="MainWindow" Height="514" Width="796">
     <Grid>
         <Grid.RowDefinitions>
@@ -43,9 +44,21 @@
                 </telerik:RadPaneGroup>
             </telerik:RadSplitContainer>
         </telerik:RadDocking>
+        <telerik:RadChat x:Name="MainChat" 
+                 HorizontalAlignment="Left" 
+                 VerticalAlignment="Top" 
+                 Height="284" 
+                 Width="554" 
+                 Margin="242,140,0,0" 
+                 Grid.Row="1" 
+                 Grid.RowSpan="2" 
+                 SendMessage="MainChat_SendMessage">
+        </telerik:RadChat>
 
-        <telerik:RadChat x:Name="MainChat" HorizontalAlignment="Left" VerticalAlignment="Top" Height="284" Width="554" Margin="242,140,0,0" Grid.Row="1" Grid.RowSpan="2" SendMessage="MainChat_SendMessage"/>
-        <telerik:RadBusyIndicator x:Name="WakeWordIndicator" Content="Say Jarvis!" HorizontalAlignment="Left" Height="94" Margin="10,10,0,0" Grid.Row="2" VerticalAlignment="Top" Width="94" BusyContent="Listening"/>
+
+
+        <telerik:RadBusyIndicator x:Name="WakeWordIndicator" Content="Say Jarvis!" HorizontalAlignment="Left" Height="74" Margin="10,10,0,0" Grid.Row="2" VerticalAlignment="Top" Width="72" BusyContent="Listening"/>
 
     </Grid>
 </Window>
+    

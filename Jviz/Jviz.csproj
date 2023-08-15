@@ -34,6 +34,7 @@
     <DependentUpon>App.xaml</DependentUpon>
     <SubType>Code</SubType>
   </Compile>
+  <Compile Include="ChatItemTemplateSelector.cs" />
   <Compile Include="Helpers\AudioMonitor.cs" />
   <Compile Include="Helpers\Chat.cs" />
   <Compile Include="Helpers\OpenAI.cs" />

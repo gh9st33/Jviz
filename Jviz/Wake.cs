@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using DotNetEnv;
 using Jviz.Helpers;
+using static Jviz.Helpers.Chat;
 
 namespace Jviz
 {
@@ -14,12 +15,15 @@ namespace Jviz
         public string WakeKeyword { get; set; } = "Jarvis"; // Replace with your actual wake word
         public event Action WakeWordDetected;
         public event Action ProcessingDone;
+        public Action<WakeState> OnStateChange { get; set; }
+
         public Chat ChatControl { get; set; }
         private readonly SpeechToText _speechToText;
+
         public Wake(Chat chatControl, OpenAIService openAIService)
         {
             // Load environment variables
-            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
+            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\.env");
             var azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
             var azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
             var keywordModelPath = Environment.GetEnvironmentVariable("KeywordModel");
@@ -34,29 +38,43 @@ namespace Jviz
             KeywordModel = KeywordRecognitionModel.FromFile(keywordModelPath);
             Recognizer = new SpeechRecognizer(Config);
 
-            _speechToText = new SpeechToText();
+            _speechToText = new SpeechToText("C:\\Users\\wareb\\source\\repos\\Jviz\\.env");
             _speechToText.Recognized += OnSpeechRecognized;
         }
-        private void OnSpeechRecognized(object sender, Helpers.RecognitionEventArgs e)
+
+        private async void OnSpeechRecognized(object sender, Helpers.RecognitionEventArgs e)
         {
+            OnStateChange?.Invoke(WakeState.ProcessingSpeechToText);
             // Handle the recognized speech here or pass it to another service
             Console.WriteLine($"Recognized: {e.Text}");
+            await ChatControl.ReceiveMessage(e.Text);
         }
+
         public async Task StartWakeWordDetection()
         {
+            OnStateChange?.Invoke(WakeState.ListeningForWakeWord);
+            if (Recognizer != null)
+            {
+                await Recognizer.StopContinuousRecognitionAsync();
+                Recognizer.Recognized -= Recognizer_Recognized;
+                Recognizer.Dispose();
+            }
             Recognizer.Recognized += Recognizer_Recognized;
             await Recognizer.StartContinuousRecognitionAsync();
         }
 
-        private void Recognizer_Recognized(object sender, SpeechRecognitionEventArgs e)
+        private async void Recognizer_Recognized(object sender, SpeechRecognitionEventArgs e)
         {
-            if (e.Result.Reason == ResultReason.RecognizedKeyword)
+            if (e.Result.Text.Contains("Jarvis"))
             {
+                OnStateChange?.Invoke(WakeState.ProcessingSpeechToText);
                 // Wake word detected
                 Console.WriteLine($"Wake word '{WakeKeyword}' detected!");
-                // You can trigger other actions here, like starting the Listener
+                OnWakeWordDetected();
+                await ListenAndConvertToText();
             }
         }
+
         public async Task ListenAndConvertToText()
         {
             try
@@ -68,15 +86,17 @@ namespace Jviz
                 ChatControl.SendMessage($"Error: {ex.Message}");
             }
         }
-        public void OnWakeWordDetected()
+
+        private void OnWakeWordDetected()
         {
             WakeWordDetected?.Invoke();
         }
 
-        public void OnProcessingDone()
+        private void OnProcessingDone()
         {
             ProcessingDone?.Invoke();
         }
+
         public async Task StopWakeWordDetection()
         {
             Recognizer.Recognized -= Recognizer_Recognized;

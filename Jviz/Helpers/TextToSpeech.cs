@@ -1,11 +1,7 @@
 ﻿using Microsoft.CognitiveServices.Speech;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using DotNetEnv;
-using System.IO;
 
 namespace Jviz.Helpers
 {
@@ -28,19 +24,11 @@ namespace Jviz.Helpers
         private readonly string _azureRegion;
         private readonly SpeechConfig _config;
 
-        public TextToSpeech(string azureSpeechKey, string azureRegion)
+        public TextToSpeech(string envPath)
         {
-            if (string.IsNullOrWhiteSpace(azureSpeechKey))
-            {
-                Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
-                _azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
-                _azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
-            }
-            else
-            {
-                _azureSpeechKey = azureSpeechKey;
-                _azureRegion = azureRegion;
-            }
+            Env.Load(envPath);
+            _azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
+            _azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
 
             _config = SpeechConfig.FromSubscription(_azureSpeechKey, _azureRegion);
             _config.SpeechSynthesisVoiceName = "en-US-ChristopherNeural"; // You can change this to your preferred voice
@@ -95,6 +83,3 @@ namespace Jviz.Helpers
         }
     }
 }
-
-
-

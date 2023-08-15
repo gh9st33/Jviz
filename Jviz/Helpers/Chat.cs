@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using System.Windows;
 using Telerik.Windows.Controls;
+using Telerik.Windows.Controls.Charting;
 using Telerik.Windows.Controls.ConversationalUI;
-using Jviz; // Assuming the Listener and SpeechToText classes are in the Jviz namespace
 
 namespace Jviz.Helpers
 {
@@ -12,31 +12,56 @@ namespace Jviz.Helpers
         private RadChat _chatControl;
         public OpenAIService OpenAIService { get; set; }
         public SpeechToText SpeechToTextService { get; set; }
+        public TextToSpeech TextToSpeechService { get; set; }
+        public Wake WakeService { get; set; }
+        public enum WakeState
+        {
+            ListeningForWakeWord,
+            ProcessingSpeechToText,
+            ProcessingTextToSpeech,
+            Idle
+        }
 
+        public WakeState CurrentState { get; private set; } = WakeState.Idle;
         public Chat(RadChat chatControl)
         {
             _chatControl = chatControl;
             OpenAIService = new OpenAIService();
+            //will change this later
+            SpeechToTextService = new SpeechToText("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
+            TextToSpeechService = new TextToSpeech("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
+            WakeService = new Wake(this, OpenAIService);
+            // Subscribe to events
+            SpeechToTextService.Recognized += SpeechToTextService_Recognized;
+            TextToSpeechService.StartedSpeaking += TextToSpeechService_StartedSpeaking;
+            TextToSpeechService.FinishedSpeaking += TextToSpeechService_FinishedSpeaking;
 
-            string azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
-            string azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
-
-            SpeechToTextService = new SpeechToText();
-
-           SpeechToTextService.Recognized += async (speech) =>
-            {
-                var text = await SpeechToTextService.ConvertSpeechToTextAsync();
-                ReceiveMessage(text);
-            };
-
-            InitializeAsync().GetAwaiter();
+            //InitializeAsync().GetAwaiter();
         }
 
-        public async Task InitializeAsync()
+        //public async Task InitializeAsync()
+        //{
+
+        //}
+        private async void HandleWakeStateChange(WakeState newState)
         {
-            await ListenerService.StartListeningAsync();
+            CurrentState = newState;
+            switch (newState)
+            {
+                case WakeState.ProcessingSpeechToText:
+                    await WakeService.StopWakeWordDetection();
+                    break;
+                case WakeState.ProcessingTextToSpeech:
+                    await WakeService.StopWakeWordDetection();
+                    break;
+                case WakeState.ListeningForWakeWord:
+                    break;
+                case WakeState.Idle:
+                    await WakeService.StartWakeWordDetection();
+                    CurrentState = WakeState.ListeningForWakeWord;
+                    break;
+            }
         }
-
         public void SendMessage(string message)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -46,21 +71,64 @@ namespace Jviz.Helpers
             });
         }
 
-        public async void ReceiveMessage(string message)
+        public async Task ReceiveMessage(string message)
         {
-            var chatMessage = new TextMessage(new Author("User"), message);
+            CurrentState = WakeState.ProcessingSpeechToText;
+            // Add the user's message to the chat control
+            var userMessage = new TextMessage(new Author("User"), message);
             Application.Current.Dispatcher.Invoke(() =>
             {
-                _chatControl.AddMessage(chatMessage);
+                _chatControl.AddMessage(userMessage);
             });
 
             OpenAIService.AddUserMessage(message); // Add the latest user message
 
+            // Get the assistant's response
             var response = await OpenAIService.GetChatResponse(message);
 
-            // Send the response as a message from the assistant
-            SendMessage(response);
+            // Add the assistant's response to the chat control
+            var assistantMessage = new TextMessage(new Author("Assistant"), response);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _chatControl.AddMessage(assistantMessage);
+            });
+
+            // Play the response using Azure TTS
+            await TextToSpeechService.PlayTextAsSpeechAsync(response);
 
         }
+
+
+        private async void SpeechToTextService_Recognized(object sender, EventArgs e)
+        {
+            // When speech is recognized, process the message
+            
+            await ReceiveMessage(e.ToString());
+
+        }
+        private void TextToSpeechService_StartedSpeaking(object sender, EventArgs e)
+        {
+            // Handle UI updates or other actions when the system starts speaking.
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Set the typing indicator to show "Jarvis is thinking..."
+                _chatControl.TypingIndicatorText = "Jarvis is thinking...";
+                _chatControl.TypingIndicatorVisibility = Visibility.Visible; // This will make the typing indicator visible
+            });
+        }
+
+        private void TextToSpeechService_FinishedSpeaking(object sender, EventArgs e)
+        {
+            CurrentState = WakeState.Idle;
+            // Handle UI updates or other actions when the system finishes speaking.
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Hide the typing indicator
+                _chatControl.TypingIndicatorText = null;
+                _chatControl.TypingIndicatorVisibility = Visibility.Collapsed;
+            });
+        }
+
+
     }
 }

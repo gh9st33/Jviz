@@ -1,0 +1,9 @@
+Telerik.Windows.Controls.RadChat, Telerik.Windows.Controls.ConversationalUI, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadListBox, Telerik.Windows.Controls, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadMaskedTextInput, Telerik.Windows.Controls.Input, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadButton, Telerik.Windows.Controls, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadRadialGauge, Telerik.Windows.Controls.DataVisualization, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadCartesianChart3D, Telerik.Windows.Controls.Chart, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadCircularProgressBar, Telerik.Windows.Controls, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadPanelBar, Telerik.Windows.Controls.Navigation, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadDocking, Telerik.Windows.Controls.Docking, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7

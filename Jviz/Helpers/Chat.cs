@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Telerik.Windows.Controls;
 using Telerik.Windows.Controls.ConversationalUI;
+using Jviz; // Assuming the Listener and SpeechToText classes are in the Jviz namespace
 
 namespace Jviz.Helpers
 {
@@ -10,12 +11,30 @@ namespace Jviz.Helpers
     {
         private RadChat _chatControl;
         public OpenAIService OpenAIService { get; set; }
-        public Wake WakeService { get; set; }
+        public SpeechToText SpeechToTextService { get; set; }
+
         public Chat(RadChat chatControl)
         {
             _chatControl = chatControl;
             OpenAIService = new OpenAIService();
-            WakeService = new Wake(this, OpenAIService);
+
+            string azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
+            string azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
+
+            SpeechToTextService = new SpeechToText();
+
+           SpeechToTextService.Recognized += async (speech) =>
+            {
+                var text = await SpeechToTextService.ConvertSpeechToTextAsync();
+                ReceiveMessage(text);
+            };
+
+            InitializeAsync().GetAwaiter();
+        }
+
+        public async Task InitializeAsync()
+        {
+            await ListenerService.StartListeningAsync();
         }
 
         public void SendMessage(string message)
@@ -26,7 +45,7 @@ namespace Jviz.Helpers
                 _chatControl.AddMessage(chatMessage);
             });
         }
-        // New method to receive messages from the user
+
         public async void ReceiveMessage(string message)
         {
             var chatMessage = new TextMessage(new Author("User"), message);
@@ -40,21 +59,8 @@ namespace Jviz.Helpers
             var response = await OpenAIService.GetChatResponse(message);
 
             // Send the response as a message from the assistant
-            SendMessage(response); 
+            SendMessage(response);
 
-            // Stop listening
-            WakeService.StopListening();
-
-            // Play the response using Azure TTS
-            await WakeService.PlayTextAsSpeech(response);
-
-            // Introduce a delay (e.g., 2 seconds) before starting the recognizer again
-            await Task.Delay(2000);
-
-            // Resume listening
-            WakeService.StartListening();
         }
-
-
     }
 }

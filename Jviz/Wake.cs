@@ -1,159 +1,86 @@
-﻿using Jviz.Helpers;
-using Microsoft.CognitiveServices.Speech;
-using Microsoft.CognitiveServices.Speech.Audio;
+﻿using Microsoft.CognitiveServices.Speech;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
-using Telerik.Windows.Controls;
-using Telerik.Windows.Controls.ConversationalUI;
 using DotNetEnv;
-using System.Net.Http;
-using System.Net.Http.Json;
-using Newtonsoft.Json;
-using System.Diagnostics;
+using Jviz.Helpers;
 
 namespace Jviz
 {
-
     public class Wake
     {
-        private readonly HttpClient _httpClient = new HttpClient();
-        public OpenAIService OpenAIService { get; set; }
-        public string AzureSpeechKey { get; set; }
-        public string AzureRegion { get; set; }
-        public KeywordRecognitionModel keywordModel { get; set; }
-        public AudioConfig AudioConfig { get; set; }
-        public SpeechConfig Config;
-        public SpeechRecognizer Recognizer;
-        public Chat _chatControl;
-        public bool isSpeaking = false;
+        public KeywordRecognitionModel KeywordModel { get; set; }
+        public SpeechConfig Config { get; set; }
+        public SpeechRecognizer Recognizer { get; set; }
         public string WakeKeyword { get; set; } = "Jarvis"; // Replace with your actual wake word
-
+        public event Action WakeWordDetected;
+        public event Action ProcessingDone;
+        public Chat ChatControl { get; set; }
+        private readonly SpeechToText _speechToText;
         public Wake(Chat chatControl, OpenAIService openAIService)
         {
-            OpenAIService = openAIService;
             // Load environment variables
-            DotNetEnv.Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
-            AzureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
-            AzureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
-            // Initialize properties
-            keywordModel = KeywordRecognitionModel.FromFile(Environment.GetEnvironmentVariable("KeywordModel"));
-            _chatControl = chatControl;
-            Config = SpeechConfig.FromSubscription(Environment.GetEnvironmentVariable("SpeechKey"), Environment.GetEnvironmentVariable("SpeechRegion"));
-            AudioConfig = AudioConfig.FromDefaultMicrophoneInput();
-            Recognizer = new SpeechRecognizer(Config, AudioConfig);
+            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
+            var azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
+            var azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
+            var keywordModelPath = Environment.GetEnvironmentVariable("KeywordModel");
 
-            // Start continuous recognition
-            Recognizer.StartContinuousRecognitionAsync();
-            chatControl.SendMessage("Listening for wake word...");
-            // Event when a keyword is recognized
-            Recognizer.Recognized += async (s, e) =>
+            if (string.IsNullOrEmpty(azureSpeechKey) || string.IsNullOrEmpty(azureRegion) || string.IsNullOrEmpty(keywordModelPath))
             {
-                Debug.WriteLine($"Recognizer event triggered with reason: {e.Result.Reason}");
-
-                if (isSpeaking) return; // Do not process any speech when the system is speaking
-
-                if (e.Result.Reason == ResultReason.RecognizedKeyword)
-                {
-                    Debug.WriteLine("Wake word detected. Stopping continuous recognition.");
-
-                    // Stop continuous recognition
-                    await Recognizer.StopContinuousRecognitionAsync();
-
-                    // Start single-shot recognition to capture the subsequent user message
-                    ListenAndConvertToText();
-                }
-            };
-
-        }
-        public void StartListening()
-        {
-            Recognizer.StartContinuousRecognitionAsync();
-        }
-
-        public void StopListening()
-        {
-            Recognizer.StopContinuousRecognitionAsync();
-        }
-        public async Task PlayTextAsSpeech(string text)
-        {
-            isSpeaking = true; // Set the flag
-            StopListening(); // Stop the recognizer
-            var config = SpeechConfig.FromSubscription(AzureSpeechKey, AzureRegion);
-            config.SpeechSynthesisVoiceName = "en-US-ChristopherNeural";
-            using (var synthesizer = new SpeechSynthesizer(config))
-            {
-                try
-                {
-                    var result = await synthesizer.SpeakTextAsync(text);
-                    if (result.Reason == ResultReason.Canceled)
-                    {
-                        var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                        _chatControl.SendMessage($"Speech Error: {cancellation.Reason}");
-
-                        if (cancellation.Reason == CancellationReason.Error)
-                        {
-                            _chatControl.SendMessage($"Error Details: {cancellation.ErrorDetails}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _chatControl.SendMessage($"Speech Error: {ex.Message}");
-                }
+                throw new ArgumentException("Required environment variables are missing.");
             }
 
-            isSpeaking = false; // Reset the flag
-            StartListening(); // Resume the recognizer
-        }
-        public async void ListenAndConvertToText()
-        {
-            Debug.WriteLine("Starting single-shot recognition.");
+            // Initialize properties
+            Config = SpeechConfig.FromSubscription(azureSpeechKey, azureRegion);
+            KeywordModel = KeywordRecognitionModel.FromFile(keywordModelPath);
+            Recognizer = new SpeechRecognizer(Config);
 
+            _speechToText = new SpeechToText();
+            _speechToText.Recognized += OnSpeechRecognized;
+        }
+        private void OnSpeechRecognized(object sender, Helpers.RecognitionEventArgs e)
+        {
+            // Handle the recognized speech here or pass it to another service
+            Console.WriteLine($"Recognized: {e.Text}");
+        }
+        public async Task StartWakeWordDetection()
+        {
+            Recognizer.Recognized += Recognizer_Recognized;
+            await Recognizer.StartContinuousRecognitionAsync();
+        }
+
+        private void Recognizer_Recognized(object sender, SpeechRecognitionEventArgs e)
+        {
+            if (e.Result.Reason == ResultReason.RecognizedKeyword)
+            {
+                // Wake word detected
+                Console.WriteLine($"Wake word '{WakeKeyword}' detected!");
+                // You can trigger other actions here, like starting the Listener
+            }
+        }
+        public async Task ListenAndConvertToText()
+        {
             try
             {
-                var result = await Recognizer.RecognizeOnceAsync();
-                Debug.WriteLine($"Single-shot recognition result: {result.Text}");
-
-                var userMessage = result.Text.Trim();
-
-                // Check if the recognized text contains the keyword and remove it
-                if (userMessage.Contains(WakeKeyword))
-                {
-                    userMessage = userMessage.Replace(WakeKeyword, "").Trim();
-                }
-
-                if (!string.IsNullOrWhiteSpace(userMessage))
-                {
-                    _chatControl.ReceiveMessage(userMessage);
-                }
-
-                Debug.WriteLine("Restarting continuous recognition for wake word detection.");
-                await Recognizer.StartContinuousRecognitionAsync();
+                await _speechToText.StartRecognitionAsync();
             }
             catch (Exception ex)
             {
-                _chatControl.SendMessage($"Error: {ex.Message}");
+                ChatControl.SendMessage($"Error: {ex.Message}");
             }
         }
+        public void OnWakeWordDetected()
+        {
+            WakeWordDetected?.Invoke();
+        }
+
+        public void OnProcessingDone()
+        {
+            ProcessingDone?.Invoke();
+        }
+        public async Task StopWakeWordDetection()
+        {
+            Recognizer.Recognized -= Recognizer_Recognized;
+            await Recognizer.StopContinuousRecognitionAsync();
+        }
     }
-        public class OpenAIChatResponse
-        {
-            public List<ChatMessage> Messages { get; set; }
-        }
-
-        public class ChatMessage
-        {
-            public string Role { get; set; }
-            public string Content { get; set; }
-        }
-
 }
-
-
-
-
-

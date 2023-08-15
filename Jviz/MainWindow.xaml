@@ -45,6 +45,7 @@
         </telerik:RadDocking>
 
         <telerik:RadChat x:Name="MainChat" HorizontalAlignment="Left" VerticalAlignment="Top" Height="284" Width="554" Margin="242,140,0,0" Grid.Row="1" Grid.RowSpan="2" SendMessage="MainChat_SendMessage"/>
+        <telerik:RadBusyIndicator x:Name="WakeWordIndicator" Content="Say Jarvis!" HorizontalAlignment="Left" Height="94" Margin="10,10,0,0" Grid.Row="2" VerticalAlignment="Top" Width="94" BusyContent="Listening"/>
 
     </Grid>
 </Window>

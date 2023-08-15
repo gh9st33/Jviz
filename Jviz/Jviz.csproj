@@ -37,6 +37,8 @@
   <Compile Include="Helpers\AudioMonitor.cs" />
   <Compile Include="Helpers\Chat.cs" />
   <Compile Include="Helpers\OpenAI.cs" />
+  <Compile Include="Helpers\SpeechToText.cs" />
+  <Compile Include="Helpers\TextToSpeech.cs" />
   <Compile Include="MainWindow.xaml.cs">
     <DependentUpon>MainWindow.xaml</DependentUpon>
     <SubType>Code</SubType>

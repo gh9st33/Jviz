@@ -42,6 +42,9 @@ namespace Jviz
             Spch = new Speech(ChatService);
             audioMonitor = new AudioMonitor(MicInputMeter);
             audioMonitor.StartMonitoring();
+
+            Wk.WakeWordDetected += OnWakeWordDetected;
+            Wk.ProcessingDone += OnProcessingDone;
         }
 
         private void btnIdentifySpeaker_Click(object sender, RoutedEventArgs e)
@@ -80,6 +83,8 @@ namespace Jviz
         {
             base.OnClosed(e);
             audioMonitor.StopMonitoring();
+            Wk.WakeWordDetected -= OnWakeWordDetected;
+            Wk.ProcessingDone -= OnProcessingDone;
         }
 
         private void MainChat_SendMessage(object sender, SendMessageEventArgs e)
@@ -91,6 +96,16 @@ namespace Jviz
                     ChatService.ReceiveMessage(e.Message.ToString());
                 });
             }
+        }
+
+        private void OnWakeWordDetected()
+        {
+            WakeWordIndicator.IsBusy = true;
+        }
+
+        private void OnProcessingDone()
+        {
+            WakeWordIndicator.IsBusy = false;
         }
     }
 }

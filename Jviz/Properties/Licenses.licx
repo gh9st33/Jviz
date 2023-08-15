@@ -7,3 +7,4 @@ Telerik.Windows.Controls.RadCartesianChart3D, Telerik.Windows.Controls.Chart, Ve
 Telerik.Windows.Controls.RadCircularProgressBar, Telerik.Windows.Controls, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
 Telerik.Windows.Controls.RadPanelBar, Telerik.Windows.Controls.Navigation, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
 Telerik.Windows.Controls.RadDocking, Telerik.Windows.Controls.Docking, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7
+Telerik.Windows.Controls.RadBusyIndicator, Telerik.Windows.Controls, Version=2023.2.606.70, Culture=neutral, PublicKeyToken=5803cfa389c90ce7

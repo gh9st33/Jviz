@@ -28,7 +28,7 @@ namespace Jviz
             // Initialize services
             ChatService = new Chat(MainChat);
             Spch = new Speech(ChatService);
-            Wk = new Wake(ChatService, new OpenAIService());
+            Wk = new Wake(ChatService);
 
             // Start audio monitoring
             audioMonitor = new AudioMonitor(MicInputMeter);

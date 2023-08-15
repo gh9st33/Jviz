@@ -23,7 +23,7 @@ namespace Jviz.Helpers
         private readonly string _azureSpeechKey;
         private readonly string _azureRegion;
         private readonly SpeechConfig _config;
-
+        public bool IsSpeaking = false;
         public TextToSpeech(string envPath)
         {
             Env.Load(envPath);
@@ -38,7 +38,8 @@ namespace Jviz.Helpers
         {
             if (State == TTSState.Speaking)
             {
-                throw new InvalidOperationException("Text-to-Speech is currently speaking. Please wait.");
+
+                return;
             }
 
             using (var synthesizer = new SpeechSynthesizer(_config))
@@ -46,26 +47,31 @@ namespace Jviz.Helpers
                 try
                 {
                     State = TTSState.Speaking;
+                    IsSpeaking = true;
                     StartedSpeaking?.Invoke(this, EventArgs.Empty);
-
+                    
                     var result = await synthesizer.SpeakTextAsync(text);
+
 
                     if (result.Reason == ResultReason.Canceled)
                     {
                         var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
                         State = TTSState.Error;
                         ErrorOccurred?.Invoke(this, new ErrorEventArgs(cancellation.Reason.ToString(), cancellation.ErrorDetails));
+                        IsSpeaking = false;
                     }
                     else
                     {
                         State = TTSState.Idle;
                         FinishedSpeaking?.Invoke(this, EventArgs.Empty);
+                        IsSpeaking = false;
                     }
                 }
                 catch (Exception ex)
                 {
                     State = TTSState.Error;
                     ErrorOccurred?.Invoke(this, new ErrorEventArgs("Speech Error", ex.Message));
+                    IsSpeaking = false;
                 }
             }
         }

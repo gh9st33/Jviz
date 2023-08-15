@@ -27,10 +27,14 @@ namespace Jviz.Helpers
         private readonly string _azureRegion;
         private readonly SpeechConfig _config;
         private SpeechRecognizer _recognizer;
-
+        private bool isRecognitionRunning = false;  // Add this at the class level
         public SpeechToText(string envPath)
         {
-            Env.Load(envPath);
+            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SpeechRegion")) || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SpeechKey")))
+            {
+                Env.Load(envPath);
+            }
             _azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
             _azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
             _config = SpeechConfig.FromSubscription(_azureSpeechKey, _azureRegion);
@@ -59,15 +63,19 @@ namespace Jviz.Helpers
 
         public async Task StartRecognitionAsync()
         {
-            if (State != STTState.Idle)
+            if (!isRecognitionRunning)
             {
-                throw new InvalidOperationException("Speech-to-Text is currently active. Please wait.");
+                try
+                {
+                    await _recognizer.StartContinuousRecognitionAsync();
+                    isRecognitionRunning = true;
+                }
+                catch (ApplicationException ex)
+                {
+                    // Handle the exception here. For example, log it or show a user-friendly message.
+                    Console.WriteLine(ex.Message);
+                }
             }
-
-            State = STTState.Listening;
-            OnStartedListening();
-
-            await _recognizer.StartContinuousRecognitionAsync();
         }
 
         public async Task StopRecognitionAsync()

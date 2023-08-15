@@ -20,13 +20,15 @@ namespace Jviz
         public Chat ChatControl { get; set; }
         private readonly SpeechToText _speechToText;
 
-        public Wake(Chat chatControl, OpenAIService openAIService)
+        public Wake(Chat chatControl)
         {
             // Load environment variables
-            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\.env");
+            Env.Load("C:\\Users\\wareb\\source\\repos\\Jviz\\Jviz\\.env");
             var azureSpeechKey = Environment.GetEnvironmentVariable("SpeechKey");
             var azureRegion = Environment.GetEnvironmentVariable("SpeechRegion");
             var keywordModelPath = Environment.GetEnvironmentVariable("KeywordModel");
+            ChatControl = chatControl;
+
 
             if (string.IsNullOrEmpty(azureSpeechKey) || string.IsNullOrEmpty(azureRegion) || string.IsNullOrEmpty(keywordModelPath))
             {
@@ -38,7 +40,7 @@ namespace Jviz
             KeywordModel = KeywordRecognitionModel.FromFile(keywordModelPath);
             Recognizer = new SpeechRecognizer(Config);
 
-            _speechToText = new SpeechToText("C:\\Users\\wareb\\source\\repos\\Jviz\\.env");
+            _speechToText = new SpeechToText(keywordModelPath);
             _speechToText.Recognized += OnSpeechRecognized;
         }
 
@@ -58,6 +60,7 @@ namespace Jviz
                 await Recognizer.StopContinuousRecognitionAsync();
                 Recognizer.Recognized -= Recognizer_Recognized;
                 Recognizer.Dispose();
+                Recognizer = new SpeechRecognizer(Config);
             }
             Recognizer.Recognized += Recognizer_Recognized;
             await Recognizer.StartContinuousRecognitionAsync();

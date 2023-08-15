@@ -38,7 +38,7 @@ namespace Jviz.Helpers
         {
             if (State == TTSState.Speaking)
             {
-
+                IsSpeaking = true;
                 return;
             }
 
@@ -51,7 +51,8 @@ namespace Jviz.Helpers
                     StartedSpeaking?.Invoke(this, EventArgs.Empty);
                     
                     var result = await synthesizer.SpeakTextAsync(text);
-
+                    FinishedSpeaking?.Invoke(this, EventArgs.Empty);
+                    IsSpeaking = false;
 
                     if (result.Reason == ResultReason.Canceled)
                     {

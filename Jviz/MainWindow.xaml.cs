@@ -57,13 +57,13 @@ namespace Jviz
             Wk.ProcessingDone -= OnProcessingDone;
         }
 
-        private void MainChat_SendMessage(object sender, SendMessageEventArgs e)
+        private async void MainChat_SendMessage(object sender, SendMessageEventArgs e)
         {
             try
             {
                 if (!string.IsNullOrWhiteSpace(e.Message.ToString()))
                 {
-                     ChatService.ReceiveMessage(e.Message.ToString());
+                     await ChatService.ReceiveMessage(e.Message.ToString());
                 }
             }
             catch (Exception ex)

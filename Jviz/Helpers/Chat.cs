@@ -20,6 +20,9 @@ namespace Jviz.Helpers
         public SpeechToText SpeechToTextService { get; set; }
         public TextToSpeech TextToSpeechService { get; set; }
         public Wake WakeService { get; set; }
+        private System.Timers.Timer inactivityTimer;
+
+
         public enum WakeState
         {
             ListeningForWakeWord,
@@ -42,6 +45,9 @@ namespace Jviz.Helpers
             TextToSpeechService.StartedSpeaking += TextToSpeechService_StartedSpeaking;
             TextToSpeechService.FinishedSpeaking += TextToSpeechService_FinishedSpeaking;
 
+            inactivityTimer = new System.Timers.Timer(10000); // 10 seconds
+            inactivityTimer.Elapsed += OnInactivityTimerElapsed;
+            inactivityTimer.AutoReset = false; // Only trigger once
             //InitializeAsync().GetAwaiter();
         }
 
@@ -61,9 +67,10 @@ namespace Jviz.Helpers
                     await WakeService.StopWakeWordDetection();
                     break;
                 case WakeState.ListeningForWakeWord:
+                    await WakeService.StartWakeWordDetection();
                     break;
                 case WakeState.Idle:
-                    await WakeService.StartWakeWordDetection();
+                    await SpeechToTextService.StopRecognitionAsync();
                     CurrentState = WakeState.ListeningForWakeWord;
                     break;
             }
@@ -79,6 +86,23 @@ namespace Jviz.Helpers
 
         public async Task ReceiveMessage(string message)
         {
+            if (message.Length < 3)
+            {
+                return;
+            }
+                if (CurrentState == WakeState.ListeningForWakeWord)
+                {
+                    return;
+                }
+                else if (CurrentState == WakeState.ProcessingSpeechToText)
+                {
+                    return;
+                }
+                else if (CurrentState == WakeState.ProcessingTextToSpeech)
+                {
+                    return;
+                }
+            inactivityTimer.Stop();
             CurrentState = WakeState.ProcessingSpeechToText;
             // Add the user's message to the chat control
             var userMessage = new TextMessage(new Author("User"), message);
@@ -115,7 +139,7 @@ namespace Jviz.Helpers
         // When speech is recognized, process the message
         private async void SpeechToTextService_Recognized(object sender, EventArgs e)
         {
-            if (e is RecognitionEventArgs speechArgs && !string.IsNullOrWhiteSpace(speechArgs.Text))
+            if (e is RecognitionEventArgs speechArgs && !string.IsNullOrWhiteSpace(speechArgs.Text) && speechArgs.Text.Length > 6)
             {
                 await ReceiveMessage(speechArgs.Text);
             }
@@ -138,19 +162,16 @@ namespace Jviz.Helpers
         }
         private async void TextToSpeechService_FinishedSpeaking(object sender, EventArgs e)
         {
-            CurrentState = WakeState.Idle;
             // ... other code ...
 
             // Wait for a short duration before restarting the SpeechToText service
             await Task.Delay(2000); // 2 seconds delay
-
             // Check if TTS has completely finished (assuming TextToSpeechService has an IsSpeaking property)
             if (!TextToSpeechService.IsSpeaking)
             {
                 try
                 {
-                    // Resume or restart the SpeechToText service
-                    await SpeechToTextService.StartRecognitionAsync();
+                    inactivityTimer.Start();
                 }
                 catch (Exception ex)
                 {
@@ -158,6 +179,12 @@ namespace Jviz.Helpers
                     Console.WriteLine(ex.Message);
                 }
             }
+
+        }
+        private async void OnInactivityTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            await SpeechToTextService.StopRecognitionAsync();
+            CurrentState = WakeState.Idle; // Set state to Idle or another appropriate state
         }
 
     }
